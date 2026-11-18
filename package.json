@@ -1,0 +1,22 @@
+{
+  "name": "mandate-guard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GenLayer Intelligent Contract that supervises an AI agent's purchases against a natural-language mandate (MetaMask ERC-7710).",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "deploy:contract": "node scripts/deploy.mjs",
+    "demo": "node scripts/demo.mjs",
+    "lint:contract": "genvm-lint check contracts/mandate_guard.py",
+    "test": "pytest -q tests"
+  },
+  "dependencies": {
+    "genlayer-js": "latest",
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "license": "MIT"
+}
