@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { decide, sampleVerdict } from "../lib/policy";
 
+const REPO_URL = "https://github.com/akindexhub777/mandate-guard";
 const LEVELS = ["continue", "warn", "escalate", "constrain", "revoke"];
 
 const EFFECTS = {
@@ -13,7 +14,18 @@ const EFFECTS = {
   revoke: "The decision goes to an EVM relayer that ends the ERC-7710 delegation (relay not included in this demo).",
 };
 
+// What the MetaMask delegation would look like after each decision (SIMULATED view).
+const DELEGATION = {
+  continue: { label: "Active", cls: "active", note: "Spending allowed within the cap." },
+  warn: { label: "Active", cls: "active", note: "Flagged for the owner." },
+  escalate: { label: "Paused", cls: "paused", note: "Waiting for human review." },
+  constrain: { label: "Constrained", cls: "constrained", note: "Limits tightened." },
+  revoke: { label: "Revoked", cls: "revoked", note: "No further redemptions." },
+};
+
 const VERDICT_LABEL = { in_scope: "In scope", borderline: "Borderline", out_of_scope: "Out of scope" };
+
+const short = (a) => (a && a.length > 14 ? `${a.slice(0, 8)}…${a.slice(-6)}` : a);
 
 function Logo({ name, file }) {
   const [ok, setOk] = useState(false);
@@ -87,6 +99,10 @@ export default function Home() {
   function reset() { setMandateId(null); setHistory([]); setDecision("continue"); setError(""); }
   const preset = (m, i, a) => setForm({ merchant: m, item: i, amount: a });
 
+  const started = history.length > 0;
+  const last = history[history.length - 1];
+  const deleg = DELEGATION[decision];
+
   return (
     <div className="wrap">
       <div className="top">
@@ -97,9 +113,12 @@ export default function Home() {
           <span className="x">×</span>
           <Logo name="MetaMask" file="metamask.png" />
         </div>
-        <span className={"pill " + (live ? "live" : "sample")}>
-          <i /> {live ? "Live · GenLayer StudioNet" : "Sample mode · not on-chain"}
-        </span>
+        <div className="bar">
+          <a className="pill" href={REPO_URL} target="_blank" rel="noreferrer">GitHub ↗</a>
+          <span className={"pill " + (live ? "live" : "sample")}>
+            <i /> {live ? `Live · GenLayer StudioNet${contract ? " · " + short(contract) : ""}` : "Sample mode · not on-chain"}
+          </span>
+        </div>
       </div>
 
       <h1>Who watches your <span>AI agent’s wallet?</span></h1>
@@ -107,11 +126,14 @@ export default function Home() {
         Give an agent a mandate in plain words. GenLayer validators read every purchase and must agree on a verdict,
         then decide: continue, warn, escalate, constrain or revoke.
       </p>
+      <div className="flow">
+        <span className="s">Mandate</span>→<span className="s">Agent purchase</span>→<span className="s gl">GenLayer validators</span>→<span className="s">Decision</span>→<span className="s">MetaMask delegation</span>
+      </div>
 
       <div className="grid">
         <div>
           <div className="card">
-            <div className="step"><b>1</b> Set the mandate</div>
+            <div className="step"><b>1</b> Set the mandate <span className="tag">Plain language</span></div>
             {mandateId ? (
               <>
                 <div className="locked"><b>Mandate:</b> {lockedMandate}<br /><b>Cap:</b> ${cap} per purchase</div>
@@ -129,7 +151,7 @@ export default function Home() {
           </div>
 
           <div className="card" style={{ opacity: mandateId ? 1 : 0.45, pointerEvents: mandateId ? "auto" : "none" }}>
-            <div className="step"><b>2</b> The agent buys something</div>
+            <div className="step"><b>2</b> The agent buys something <span className="tag">Receipt</span></div>
             <div className="row">
               <div><label htmlFor="merchant">Merchant</label><input id="merchant" value={form.merchant} onChange={(e) => setForm({ ...form, merchant: e.target.value })} /></div>
               <div><label htmlFor="amount">USD</label><input id="amount" type="number" step="0.5" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
@@ -137,23 +159,25 @@ export default function Home() {
             <label htmlFor="item">Item</label>
             <input id="item" value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} />
             <div className="chips">
-              <button className="chip" onClick={() => preset("SportsWire API", "Premier League live scores, 1 day pass", "3")}>Sports data</button>
-              <button className="chip" onClick={() => preset("CelebGossip Daily", "Celebrity gossip premium newsletter", "4")}>Gossip</button>
-              <button className="chip" onClick={() => preset("LuckyBet", "Casino credit top-up", "12")}>Casino, over cap</button>
+              <button className="chip" onClick={() => preset("SportsWire API", "Premier League live scores, 1 day pass", "3")}><span className="ic">⚽</span>Sports data</button>
+              <button className="chip" onClick={() => preset("CelebGossip Daily", "Celebrity gossip premium newsletter", "4")}><span className="ic">📰</span>Gossip</button>
+              <button className="chip" onClick={() => preset("LuckyBet", "Casino credit top-up", "12")}><span className="ic">🎰</span>Casino, over cap</button>
             </div>
             <button disabled={busy === "review"} onClick={submitPurchase}>{busy === "review" ? "Validators are deliberating…" : "Agent buys → GenLayer reviews"}</button>
           </div>
         </div>
 
         <div className="card">
-          <div className="step"><b>3</b> The decision</div>
+          <div className="step"><b>3</b> The decision <span className="tag">GenLayer verdict</span></div>
           <div className="gauge">
             {LEVELS.map((l) => (
-              <div key={l} className={"seg " + (decision === l && (history.length > 0 || l === "continue") ? "on " + l : "")}>{l}</div>
+              <div key={l} className={"seg " + (decision === l && (started || !!mandateId) ? "on " + l : "")}>{l}</div>
             ))}
           </div>
-          <div className={"big " + decision}>{history.length || mandateId ? decision : "—"}</div>
-          <p className="effect">{history.length ? EFFECTS[decision] : "Waiting for the first purchase."}</p>
+          <div className={"big " + (started || mandateId ? decision : "ready")}>{started || mandateId ? decision : "Ready"}</div>
+          <p className="effect">
+            {started ? EFFECTS[decision] : mandateId ? "Mandate created. Send the first purchase." : "Create a mandate, then let the agent spend."}
+          </p>
 
           {busy === "review" && (
             <div className="think">
@@ -162,7 +186,16 @@ export default function Home() {
             </div>
           )}
 
-          {history.length === 0 && busy !== "review" ? (
+          {started && busy !== "review" && last && (
+            <div className={"consensus " + (live ? "" : "off")}>
+              <span>{live ? "✔" : "○"}</span>
+              <div>
+                {live ? <><b>Consensus reached on GenLayer.</b> Validators agreed the last purchase is <b>{VERDICT_LABEL[last.verdict].toLowerCase()}</b>.</> : <><b>Sample mode.</b> Verdict from a keyword stand-in, not from validators.</>}
+              </div>
+            </div>
+          )}
+
+          {!started && busy !== "review" ? (
             <div className="empty">Purchases reviewed by the validators will appear here.</div>
           ) : (
             <ul className="tl">
@@ -181,8 +214,21 @@ export default function Home() {
               ))}
             </ul>
           )}
+
+          <div className="deleg">
+            <div className="hd">
+              <Logo name="MetaMask" file="metamask.png" />
+              <b style={{ marginLeft: "auto" }}>Delegation (ERC-7710)</b>
+            </div>
+            <div className="kv">
+              <div>Status<strong className={"status " + deleg.cls}>{mandateId ? deleg.label : "—"}</strong></div>
+              <div>Cap per purchase<strong>{mandateId ? `$${cap}` : "—"}</strong></div>
+            </div>
+            <div className="simnote">Simulated view. {mandateId ? deleg.note + " " : ""}The EVM relay that applies the decision on MetaMask is not part of this demo.</div>
+          </div>
+
           {error && <div className="err">{error}</div>}
-          {live && contract && <div className="foot">Contract {contract}</div>}
+          <div className="foot">Open source · <a href={REPO_URL} target="_blank" rel="noreferrer">github.com/akindexhub777/mandate-guard</a></div>
         </div>
       </div>
     </div>
