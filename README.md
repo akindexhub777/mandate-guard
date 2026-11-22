@@ -22,7 +22,6 @@ unit-tested code then turns verdicts into a decision.
 | `skills/mandate-guard/SKILL.md` | Agent skill so other agents can reuse it |
 | `tests/test_policy.py` | Unit tests of the decision policy |
 | `docs/DESIGN.md` | Design and honest scope |
-| `docs/VIDEO_SCRIPT.md` | Storyboard of the 45-second demo video |
 
 ## Run it
 Requires Node 20+ and Python 3.10+.
