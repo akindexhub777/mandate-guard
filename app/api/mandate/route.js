@@ -13,13 +13,13 @@ export async function POST(req) {
   if (!cfg) return NextResponse.json({ mode: "sample", mandateId: "sample" });
   try {
     const { client, account } = getClient(cfg.key);
-    await write(client, cfg.address, "create_mandate", [
+    const tx = await write(client, cfg.address, "create_mandate", [
       account.address,
       text.trim().slice(0, 1000),
       Math.round(capUsd * 100),
     ]);
     const count = await client.readContract({ address: cfg.address, functionName: "get_mandate_count", args: [] });
-    return NextResponse.json({ mode: "live", mandateId: "m" + count });
+    return NextResponse.json({ mode: "live", mandateId: "m" + count, tx });
   } catch (e) {
     return NextResponse.json({ error: String(e?.message || e) }, { status: 502 });
   }

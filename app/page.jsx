@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { decide, sampleVerdict } from "../lib/policy";
 
 const REPO_URL = "https://github.com/akindexhub777/mandate-guard";
+const EXPLORER = "https://explorer-studio.genlayer.com";
 const LEVELS = ["continue", "warn", "escalate", "constrain", "revoke"];
 
 const EFFECTS = {
@@ -62,6 +63,8 @@ export default function Home() {
   const [decision, setDecision] = useState("continue");
   const [busy, setBusy] = useState(null); // "mandate" | "review" | null
   const [error, setError] = useState("");
+  const [evidence, setEvidence] = useState([]);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetch("/api/state").then((r) => r.json()).then((s) => { setLive(!!s.live); setContract(s.contract); }).catch(() => {});
@@ -74,6 +77,7 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "request failed");
       setMandateId(data.mandateId); setLockedMandate(mandate);
+      if (data.tx) setEvidence([{ label: "create_mandate", hash: data.tx }]);
     } catch (e) { setError(e.message); }
     setBusy(null);
   }
@@ -88,6 +92,7 @@ export default function Home() {
         if (!res.ok) throw new Error(data.error || "request failed");
         setHistory(data.reviews.map((r) => ({ merchant: r.merchant, item: r.item, cents: r.amount_usd_cents, verdict: r.verdict, over_cap: r.over_cap })));
         setDecision(data.decision);
+        if (data.tx) setEvidence((ev) => [...ev, { label: `review_purchase: ${form.merchant} → ${data.decision}`, hash: data.tx }]);
       } else {
         const next = [...history, { merchant: form.merchant, item: form.item, cents: Math.round(amountUsd * 100), verdict: sampleVerdict(form.merchant, form.item), over_cap: amountUsd > parseFloat(cap) }];
         setHistory(next); setDecision(decide(next));
@@ -96,7 +101,11 @@ export default function Home() {
     setBusy(null);
   }
 
-  function reset() { setMandateId(null); setHistory([]); setDecision("continue"); setError(""); }
+  function reset() { setMandateId(null); setHistory([]); setDecision("continue"); setError(""); setEvidence([]); }
+  async function copyEvidence() {
+    const lines = [contract ? `Contract: ${EXPLORER}/contracts/${contract}` : null, ...evidence.map((e) => `${e.label}: ${EXPLORER}/tx/${e.hash}`)].filter(Boolean).join("\n");
+    try { await navigator.clipboard.writeText(lines); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (e) { setError("Copy failed"); }
+  }
   const preset = (m, i, a) => setForm({ merchant: m, item: i, amount: a });
 
   const started = history.length > 0;
@@ -226,6 +235,16 @@ export default function Home() {
             </div>
             <div className="simnote">Simulated view. {mandateId ? deleg.note + " " : ""}The EVM relay that applies the decision on MetaMask is not part of this demo.</div>
           </div>
+
+          {live && (contract || evidence.length > 0) && (
+            <div className="evid">
+              <div className="evh"><b>On-chain evidence</b><button className="chip" onClick={copyEvidence}>{copied ? "Copied ✔" : "Copy links"}</button></div>
+              {contract && <a href={`${EXPLORER}/contracts/${contract}`} target="_blank" rel="noreferrer">Contract {short(contract)} ↗</a>}
+              {evidence.map((e, i) => (
+                <a key={i} href={`${EXPLORER}/tx/${e.hash}`} target="_blank" rel="noreferrer">{e.label} · {short(e.hash)} ↗</a>
+              ))}
+            </div>
+          )}
 
           {error && <div className="err">{error}</div>}
           <div className="foot">Open source · <a href={REPO_URL} target="_blank" rel="noreferrer">github.com/akindexhub777/mandate-guard</a></div>

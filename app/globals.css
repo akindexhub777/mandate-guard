@@ -109,3 +109,9 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 .simnote{margin-top:10px;font-size:11px;color:var(--mute)}
 .chip .ic{margin-right:5px}
 .foot a{color:var(--acc);text-decoration:none}
+
+.evid{margin-top:14px;border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#0a0e1a;display:grid;gap:6px;font-size:13px}
+.evid a{color:var(--acc);text-decoration:none;word-break:break-all}
+.evid a:hover{text-decoration:underline}
+.evh{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.evh .chip{padding:4px 10px}

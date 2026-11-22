@@ -13,7 +13,7 @@ export async function POST(req) {
   if (!cfg) return NextResponse.json({ error: "live_mode_not_configured" }, { status: 400 });
   try {
     const { client } = getClient(cfg.key);
-    await write(client, cfg.address, "review_purchase", [
+    const tx = await write(client, cfg.address, "review_purchase", [
       mandateId,
       String(merchant).slice(0, 200),
       String(item).slice(0, 600),
@@ -23,7 +23,7 @@ export async function POST(req) {
     const reviews = JSON.parse(
       await client.readContract({ address: cfg.address, functionName: "get_reviews", args: [mandateId] })
     );
-    return NextResponse.json({ mode: "live", decision, reviews });
+    return NextResponse.json({ mode: "live", decision, reviews, tx });
   } catch (e) {
     return NextResponse.json({ error: String(e?.message || e) }, { status: 502 });
   }
